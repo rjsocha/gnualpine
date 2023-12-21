@@ -1,0 +1,38 @@
+#::PROJECT:CI:GNUALPINE
+default:
+  image: ${DPROXY}wyga/docker-shell:latest
+  services:
+  - name: ${DPROXY}docker:dind
+    alias: docker
+    command: [ "--registry-mirror=https://mirror.e.wyga.site" ]
+  tags:
+    - docker-in-docker
+
+variables:
+  DPROXY: "${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/"
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_CREATE_CONTEXT: 1
+
+stages:
+  - builder
+
+Image Builder:
+  stage: builder
+  variables:
+    GIT_DEPTH: 1
+  before_script:
+    - ci/ci-setup-environment
+    - export PATH=$PWD/ci:$PWD:${PATH}
+  script:
+    - ci-builder
+  artifacts:
+    name: "build-artifacts-${CI_PROJECT_NAME}"
+    paths:
+      - .artifacts
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_TAG =~ /trigger/
